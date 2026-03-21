@@ -59,8 +59,26 @@
         return;
       }
 
-      // Log click to Cloudflare Function
-      async function logClick() {
+      // ⭐ Show user-facing message immediately
+      messageEl.innerHTML = `
+        <div style="font-family: sans-serif; line-height: 1.5;">
+          <strong style="font-size: 32px;">Fanzolinks…</strong><br><br>
+          Redirecting…
+        </div>
+      `;
+
+      // ⭐ BLOCKING LOG + REDIRECT
+      (async () => {
+
+        // Fire GA4
+        gtag('event', 'redirect_click', {
+          promoter,
+          platform,
+          campaign,
+          dest
+        });
+
+        // BLOCKING POST to /log
         try {
           await fetch("/log", {
             method: "POST",
@@ -75,43 +93,31 @@
         } catch (e) {
           console.error("Log error:", e);
         }
-      }
 
-      // Fire GA4 event
-      gtag('event', 'redirect_click', {
-        promoter,
-        platform,
-        campaign,
-        dest
-      });
+        // Debug mode stops redirect
+        if (debug) {
+          messageEl.innerHTML = `
+            <div style="font-family: sans-serif; line-height: 1.5;">
+              <strong style="font-size: 28px;">Debug Mode Active</strong><br><br>
+              Redirect disabled so you can inspect console logs.<br><br>
+              Destination:<br>
+              <code>${dest}</code>
+            </div>
+          `;
+          return;
+        }
 
-      // Log to DB
-      logClick();
-
-      // Debug mode: no redirect
-      if (debug) {
-        messageEl.innerHTML = `
-          <div style="font-family: sans-serif; line-height: 1.5;">
-            <strong style="font-size: 28px;">Debug Mode Active</strong><br><br>
-            Redirect disabled so you can inspect console logs.<br><br>
-            Destination:<br>
-            <code>${dest}</code>
-          </div>
-        `;
-        return;
-      }
-
-      // Normal redirect
-      setTimeout(() => {
+        // Redirect AFTER log completes
         window.location.replace(dest);
-      }, 300);
+
+      })();
     });
   </script>
 </head>
 
 <body>
   <div id="message" style="font-family: sans-serif; font-size: 22px; padding: 40px;">
-    Redirecting…
+    Fanzolinks… Redirecting…
   </div>
 </body>
 </html>
