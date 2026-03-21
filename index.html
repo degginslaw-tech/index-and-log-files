@@ -1,7 +1,67 @@
 <!DOCTYPE html>
 <html>
-  <body style="font-family: sans-serif; padding: 40px;">
-    <h1>TEST PAGE</h1>
-    <p>If you see this, Cloudflare Pages is serving THIS file.</p>
-  </body>
+<head>
+  <title>Redirecting...</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <script>
+    window.addEventListener('load', () => {
+      const params = new URLSearchParams(window.location.search);
+
+      const promoter = params.get('promoter') || 'unknown';
+      const platform = params.get('platform') || 'unknown';
+      const campaign = params.get('campaign') || 'default';
+      let dest = params.get('dest');
+
+      // If no destination, show fallback
+      if (!dest) {
+        document.body.innerHTML = `
+          <div style="font-family: sans-serif; padding: 40px;">
+            <h1>Fanzolinks</h1>
+            <p>This link is missing a destination.</p>
+            <a href="https://fanzolinks.com"
+               style="display:inline-block;padding:12px 22px;background:#007bff;color:white;border-radius:6px;text-decoration:none;font-weight:bold;">
+              Go to the main site
+            </a>
+          </div>
+        `;
+        return;
+      }
+
+      // Safely decode if encoded
+      try {
+        dest = decodeURIComponent(dest);
+      } catch (e) {
+        // ignore if not encoded
+      }
+
+      // Build final redirect URL manually (works for ANY URL)
+      const extraParams = new URLSearchParams({
+        promoter,
+        platform,
+        campaign
+      }).toString();
+
+      const separator = dest.includes('?') ? '&' : '?';
+      const finalUrl = dest + separator + extraParams;
+
+      // Show message immediately
+      document.body.innerHTML = `
+        <div style="font-family: sans-serif; padding: 40px;">
+          <h1>Fanzolinks</h1>
+          <p>Redirecting…</p>
+        </div>
+      `;
+
+      // Redirect after a short delay
+      setTimeout(() => {
+        window.location.href = finalUrl;
+      }, 150);
+    });
+  </script>
+</head>
+
+<body>
+</body>
 </html>
