@@ -16,23 +16,25 @@
     window.addEventListener('load', () => {
       const params = new URLSearchParams(window.location.search);
 
+      // Required attribution params
       const promoter = params.get('promoter') || 'unknown';
       const platform = params.get('platform') || 'unknown';
       const campaign = params.get('campaign') || 'default';
-      const debug = params.get('debug');   // ⭐ NEW
+      const debug = params.get('debug');
 
+      // STRICT: dest only
       let dest = params.get('dest');
       if (dest) {
         try { dest = decodeURIComponent(dest); } catch (e) {}
       }
 
       const messageEl = document.getElementById("message");
-
       if (!messageEl) {
         document.body.innerHTML = "Error: message element missing.";
         return;
       }
 
+      // Missing destination fallback
       if (!dest) {
         messageEl.innerHTML = `
           <div style="font-family: sans-serif; line-height: 1.5;">
@@ -57,15 +59,16 @@
         return;
       }
 
+      // Log click to Cloudflare Function
       async function logClick() {
         try {
-          await fetch("https://redirectpage-8p1.pages.dev/log", {
+          await fetch("/log", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               promoter,
               platform,
-              destination: dest,
+              dest,
               user_agent: navigator.userAgent
             })
           });
@@ -74,7 +77,7 @@
         }
       }
 
-      // Fire GA4
+      // Fire GA4 event
       gtag('event', 'redirect_click', {
         promoter,
         platform,
@@ -85,7 +88,7 @@
       // Log to DB
       logClick();
 
-      // ⭐ DEBUG MODE — stops redirect
+      // Debug mode: no redirect
       if (debug) {
         messageEl.innerHTML = `
           <div style="font-family: sans-serif; line-height: 1.5;">
@@ -95,7 +98,7 @@
             <code>${dest}</code>
           </div>
         `;
-        return; // ⭐ STOP HERE — NO REDIRECT
+        return;
       }
 
       // Normal redirect
