@@ -2,56 +2,26 @@
 <html>
 <head>
   <title>Redirecting...</title>
-
-  <!-- GA4 -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-4F1FJKGFTF"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){ dataLayer.push(arguments); }
-    gtag('js', new Date());
-    gtag('config', 'G-4F1FJKGFTF');
-  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <script>
     window.addEventListener('load', () => {
       const params = new URLSearchParams(window.location.search);
 
-      // Required attribution params
       const promoter = params.get('promoter') || 'unknown';
       const platform = params.get('platform') || 'unknown';
       const campaign = params.get('campaign') || 'default';
-      const debug = params.get('debug');
+      const dest = params.get('dest');
 
-      // STRICT: dest only
-      let dest = params.get('dest');
-      if (dest) {
-        try { dest = decodeURIComponent(dest); } catch (e) {}
-      }
-
-      const messageEl = document.getElementById("message");
-      if (!messageEl) {
-        document.body.innerHTML = "Error: message element missing.";
-        return;
-      }
-
-      // Missing destination fallback
+      // If no destination, show fallback
       if (!dest) {
-        messageEl.innerHTML = `
-          <div style="font-family: sans-serif; line-height: 1.5;">
-            <strong style="font-size: 32px;">Fanzolinks…</strong><br><br>
-            This link is missing a destination.<br><br>
-
+        document.body.innerHTML = `
+          <div style="font-family: sans-serif; padding: 40px;">
+            <h1>Fanzolinks</h1>
+            <p>This link is missing a destination.</p>
             <a href="https://fanzolinks.com"
-               style="
-                 display: inline-block;
-                 padding: 12px 22px;
-                 background-color: #007bff;
-                 color: white;
-                 border-radius: 6px;
-                 text-decoration: none;
-                 font-weight: bold;
-                 font-size: 18px;
-               ">
+               style="display:inline-block;padding:12px 22px;background:#007bff;color:white;border-radius:6px;text-decoration:none;font-weight:bold;">
               Go to the main site
             </a>
           </div>
@@ -59,39 +29,28 @@
         return;
       }
 
-      // ⭐ Show user-facing message immediately
-      messageEl.innerHTML = `
-        <div style="font-family: sans-serif; line-height: 1.5;">
-          <strong style="font-size: 32px;">Fanzolinks…</strong><br><br>
-          Redirecting…
+      // Build final redirect URL with attribution params
+      const finalUrl = new URL(dest);
+      finalUrl.searchParams.set('promoter', promoter);
+      finalUrl.searchParams.set('platform', platform);
+      finalUrl.searchParams.set('campaign', campaign);
+
+      // Show message immediately
+      document.body.innerHTML = `
+        <div style="font-family: sans-serif; padding: 40px;">
+          <h1>Fanzolinks</h1>
+          <p>Redirecting…</p>
         </div>
       `;
 
-      // ⭐ GUARANTEED LOGGING USING BEACON API
-      function logClick() {
-        const payload = JSON.stringify({
-          promoter,
-          platform,
-          dest,
-          user_agent: navigator.userAgent
-        });
+      // Redirect after a short delay (ensures message renders)
+      setTimeout(() => {
+        window.location.href = finalUrl.toString();
+      }, 150);
+    });
+  </script>
+</head>
 
-        navigator.sendBeacon("/log", payload);
-      }
-
-      // Fire GA4
-      gtag('event', 'redirect_click', {
-        promoter,
-        platform,
-        campaign,
-        dest
-      });
-
-      // Send log (non-blocking but guaranteed)
-      logClick();
-
-      // Debug mode stops redirect
-      if (debug) {
-        messageEl.innerHTML = `
-          <div style="font-family: sans-serif; line-height: 1.5;">
-            <strong style="font-size: 28px;">Debug Mode Active</strong><br><br>
+<body>
+</body>
+</html>
