@@ -7,16 +7,29 @@ export async function onRequestPost(context) {
     "Access-Control-Allow-Headers": "Content-Type"
   };
 
-  // Handle preflight
+  // Preflight
   if (context.request.method === "OPTIONS") {
     return new Response("OK", { headers: corsHeaders });
   }
 
-  // ⭐ DEBUG TRY BLOCK (replace your existing try/catch with THIS)
   try {
     const body = await context.request.json();
 
-    // Echo the body back so we can confirm the function is receiving data
+    // STRICT: require dest
+    if (!body.dest) {
+      return new Response(
+        JSON.stringify({ error: "Missing required field: dest" }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders
+          }
+        }
+      );
+    }
+
+    // ⭐ DEBUG ECHO RESPONSE
     return new Response(JSON.stringify(body), {
       headers: {
         "Content-Type": "application/json",
@@ -25,9 +38,15 @@ export async function onRequestPost(context) {
     });
 
   } catch (err) {
-    return new Response("Error parsing JSON", {
-      status: 500,
-      headers: corsHeaders
-    });
+    return new Response(
+      JSON.stringify({ error: "Error parsing JSON", details: err.message }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders
+        }
+      }
+    );
   }
 }
