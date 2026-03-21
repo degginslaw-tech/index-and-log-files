@@ -7,61 +7,82 @@
 
   <script>
     window.addEventListener('load', () => {
-      const params = new URLSearchParams(window.location.search);
+      try {
+        const params = new URLSearchParams(window.location.search);
 
-      const promoter = params.get('promoter') || 'unknown';
-      const platform = params.get('platform') || 'unknown';
-      const campaign = params.get('campaign') || 'default';
-      let dest = params.get('dest');
+        const promoter = params.get('promoter') || 'unknown';
+        const platform = params.get('platform') || 'unknown';
+        const campaign = params.get('campaign') || 'default';
+        let dest = params.get('dest');
 
-      // If no destination, show fallback
-      if (!dest) {
+        if (!dest) {
+          document.body.innerHTML = `
+            <div style="font-family: sans-serif; padding: 40px;">
+              <h1>Fanzolinks</h1>
+              <p>No <code>dest</code> parameter found in the URL.</p>
+              <p>Full query: <code>${window.location.search || '(none)'}</code></p>
+              <a href="https://fanzolinks.com"
+                 style="display:inline-block;padding:12px 22px;background:#007bff;color:white;border-radius:6px;text-decoration:none;font-weight:bold;">
+                Go to the main site
+              </a>
+            </div>
+          `;
+          return;
+        }
+
+        // Try to decode dest if encoded
+        let decodedDest = dest;
+        try {
+          decodedDest = decodeURIComponent(dest);
+        } catch (e) {}
+
+        const extraParams = new URLSearchParams({
+          promoter,
+          platform,
+          campaign
+        }).toString();
+
+        const separator = decodedDest.includes('?') ? '&' : '?';
+        const finalUrl = decodedDest + separator + extraParams;
+
+        // Show everything we're using, then redirect
+        document.body.innerHTML = `
+          <div style="font-family: sans-serif; padding: 40px; max-width: 800px;">
+            <h1>Fanzolinks</h1>
+            <p>JS is running. Preparing to redirect…</p>
+            <p><strong>Raw dest:</strong> <code>${dest}</code></p>
+            <p><strong>Decoded dest:</strong> <code>${decodedDest}</code></p>
+            <p><strong>Promoter:</strong> <code>${promoter}</code></p>
+            <p><strong>Platform:</strong> <code>${platform}</code></p>
+            <p><strong>Campaign:</strong> <code>${campaign}</code></p>
+            <p><strong>Final URL:</strong> <code>${finalUrl}</code></p>
+            <p>If you are not redirected automatically, <a href="${finalUrl}">click here</a>.</p>
+          </div>
+        `;
+
+        setTimeout(() => {
+          window.location.href = finalUrl;
+        }, 800);
+      } catch (err) {
         document.body.innerHTML = `
           <div style="font-family: sans-serif; padding: 40px;">
             <h1>Fanzolinks</h1>
-            <p>This link is missing a destination.</p>
-            <a href="https://fanzolinks.com"
-               style="display:inline-block;padding:12px 22px;background:#007bff;color:white;border-radius:6px;text-decoration:none;font-weight:bold;">
-              Go to the main site
-            </a>
+            <p><strong>Error in script:</strong></p>
+            <pre>${String(err && err.message ? err.message : err)}</pre>
+            <p>Full URL: <code>${window.location.href}</code></p>
           </div>
         `;
-        return;
       }
-
-      // Safely decode if encoded
-      try {
-        dest = decodeURIComponent(dest);
-      } catch (e) {
-        // ignore if not encoded
-      }
-
-      // Build final redirect URL manually (works for ANY URL)
-      const extraParams = new URLSearchParams({
-        promoter,
-        platform,
-        campaign
-      }).toString();
-
-      const separator = dest.includes('?') ? '&' : '?';
-      const finalUrl = dest + separator + extraParams;
-
-      // Show message immediately
-      document.body.innerHTML = `
-        <div style="font-family: sans-serif; padding: 40px;">
-          <h1>Fanzolinks</h1>
-          <p>Redirecting…</p>
-        </div>
-      `;
-
-      // Redirect after a short delay
-      setTimeout(() => {
-        window.location.href = finalUrl;
-      }, 150);
     });
   </script>
 </head>
 
 <body>
+  <noscript>
+    <div style="font-family: sans-serif; padding: 40px;">
+      <h1>Fanzolinks</h1>
+      <p>JavaScript is disabled. This page needs JS to redirect.</p>
+    </div>
+  </noscript>
 </body>
 </html>
