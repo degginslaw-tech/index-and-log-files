@@ -38,10 +38,11 @@
       const separator = dest.includes('?') ? '&' : '?';
       const finalUrl = dest + separator + extraParams;
 
+      // Show redirect message
       document.body.innerHTML = `
         <div style="font-family:sans-serif;padding:40px;text-align:center;">
           <h1>Fanzolinks</h1>
-          <p>Redirecting...</p>
+          <p>Redirecting in 3 seconds...</p>
         </div>
       `;
 
@@ -65,7 +66,7 @@
           promoter,
           platform,
           destination: dest,
-          ip_address: ip,       // can now be null
+          ip_address: ip,       // can be null
           user_agent: userAgent,
           created_at: new Date().toISOString(),
           click_date: clickDate
@@ -77,10 +78,10 @@
         console.error('Unexpected insert error:', err);
       }
 
-      // Wait 500ms before redirecting to ensure insert completes
+      // Delay 3 seconds before redirecting to allow insert to complete
       setTimeout(() => {
         window.location.href = finalUrl;
-      }, 500);
+      }, 3000);
     });
   </script>
 </head>
