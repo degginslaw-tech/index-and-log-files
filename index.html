@@ -6,7 +6,7 @@
 (async () => {
   const client = supabase.createClient(
     'https://ngpbnhyuwvbcmdwpuhxq.supabase.co',
-    'YOUR_ANON_KEY'
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ncGJuaHl1d3ZiY21kd3B1aHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODYzNTAsImV4cCI6MjA4OTY2MjM1MH0.5pjzETSCFb-YjxSYxq8MX7t3ZyOEGlQ_dIkx_am3jLw'
   );
 
   const { data, error } = await client.from('clicks').insert([
