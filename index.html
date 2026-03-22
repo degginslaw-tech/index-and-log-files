@@ -5,26 +5,28 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+  <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
     window.addEventListener('load', async () => {
+      const SUPABASE_URL = 'https://ngpbnhyuwvbcmdwpuhxq.supabase.co';
+      const SUPABASE_KEY = 'YOUR_ANON_KEY';
 
-      const supabaseUrl = 'https://ngpbnhyuwvbcmdwpuhxq.supabase.co';
-      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ncGJuaHl1d3ZiY21kd3B1aHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODYzNTAsImV4cCI6MjA4OTY2MjM1MH0.5pjzETSCFb-YjxSYxq8MX7t3ZyOEGlQ_dIkx_am3jLw';
-      const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+      const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
       const params = new URLSearchParams(window.location.search);
+
       const promoter = params.get('promoter') || 'unknown';
       const platform = params.get('platform') || 'unknown';
+      const campaign = params.get('campaign') || 'default';
       let dest = params.get('dest');
 
       if (!dest) {
         document.body.innerHTML = `
-          <div style="font-family: sans-serif; padding: 40px;">
+          <div style="font-family:sans-serif;padding:40px;text-align:center;">
             <h1>Fanzolinks</h1>
-            <p>This link is missing a destination.</p>
-            <a href="https://fanzolinks.com">Go to main site</a>
+            <p>Missing destination.</p>
           </div>
         `;
         return;
@@ -32,60 +34,60 @@
 
       try {
         dest = decodeURIComponent(dest);
-      } catch (e) {}
+      } catch {}
 
-      const extraParams = new URLSearchParams({ promoter, platform }).toString();
+      const extraParams = new URLSearchParams({
+        promoter,
+        platform,
+        campaign
+      }).toString();
+
       const separator = dest.includes('?') ? '&' : '?';
       const finalUrl = dest + separator + extraParams;
 
       document.body.innerHTML = `
-        <div style="font-family: sans-serif; padding: 40px;">
+        <div style="font-family:sans-serif;padding:40px;text-align:center;">
           <h1>Fanzolinks</h1>
-          <p>Redirecting…</p>
+          <p>Redirecting...</p>
         </div>
       `;
 
-      // ✅ Capture browser data
+      // Collect metadata
       const userAgent = navigator.userAgent;
       const clickDate = new Date().toISOString().split('T')[0];
 
-      // ⚠️ IP can't be reliably captured client-side without a service
-      const ipAddress = null;
-
+      // Get IP (important: browser cannot directly access it)
+      let ip = null;
       try {
-        const { data, error } = await supabase
-          .from('clicks')
-          .insert([
-            {
-              promoter,
-              platform,
-              destination: dest,
-              user_agent: userAgent,
-              ip_address: ipAddress,
-              created_at: new Date().toISOString(),
-              click_date: clickDate
-            }
-          ]);
+        const res = await fetch('https://api.ipify.org?format=json');
+        const data = await res.json();
+        ip = data.ip;
+      } catch {}
 
-        if (error) {
-          console.error('❌ INSERT ERROR:', error);
-        } else {
-          console.log('✅ INSERT SUCCESS:', data);
-        }
-
+      // Insert into Supabase
+      try {
+        await client.from('clicks').insert([
+          {
+            promoter,
+            platform,
+            destination: dest,
+            ip_address: ip,
+            user_agent: userAgent,
+            created_at: new Date().toISOString(),
+            click_date: clickDate
+          }
+        ]);
       } catch (err) {
-        console.error('❌ INSERT FAILED:', err);
+        console.error('Insert failed:', err);
       }
 
-      // Give it time before redirect
+      // Small delay to avoid losing logs in strict environments
       setTimeout(() => {
         window.location.href = finalUrl;
-      }, 800);
-
+      }, 150);
     });
   </script>
 </head>
 
-<body>
-</body>
+<body></body>
 </html>
