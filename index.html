@@ -5,55 +5,39 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Supabase JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
     window.addEventListener('load', async () => {
 
-      // ✅ Init Supabase
       const supabaseUrl = 'https://ngpbnhyuwvbcmdwpuhxq.supabase.co';
       const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ncGJuaHl1d3ZiY21kd3B1aHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODYzNTAsImV4cCI6MjA4OTY2MjM1MH0.5pjzETSCFb-YjxSYxq8MX7t3ZyOEGlQ_dIkx_am3jLw';
       const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-      // ✅ Get params
       const params = new URLSearchParams(window.location.search);
       const promoter = params.get('promoter') || 'unknown';
       const platform = params.get('platform') || 'unknown';
-      const campaign = params.get('campaign') || 'default';
       let dest = params.get('dest');
 
-      // ❌ No destination fallback
       if (!dest) {
         document.body.innerHTML = `
           <div style="font-family: sans-serif; padding: 40px;">
             <h1>Fanzolinks</h1>
             <p>This link is missing a destination.</p>
-            <a href="https://fanzolinks.com"
-               style="display:inline-block;padding:12px 22px;background:#007bff;color:white;border-radius:6px;text-decoration:none;font-weight:bold;">
-              Go to the main site
-            </a>
+            <a href="https://fanzolinks.com">Go to main site</a>
           </div>
         `;
         return;
       }
 
-      // ✅ Decode safely
       try {
         dest = decodeURIComponent(dest);
       } catch (e) {}
 
-      // ✅ Build redirect URL
-      const extraParams = new URLSearchParams({
-        promoter,
-        platform,
-        campaign
-      }).toString();
-
+      const extraParams = new URLSearchParams({ promoter, platform }).toString();
       const separator = dest.includes('?') ? '&' : '?';
       const finalUrl = dest + separator + extraParams;
 
-      // ✅ UI
       document.body.innerHTML = `
         <div style="font-family: sans-serif; padding: 40px;">
           <h1>Fanzolinks</h1>
@@ -61,8 +45,12 @@
         </div>
       `;
 
-      // ✅ Fire insert (DON’T trust it blindly)
-      let insertSuccess = false;
+      // ✅ Capture browser data
+      const userAgent = navigator.userAgent;
+      const clickDate = new Date().toISOString().split('T')[0];
+
+      // ⚠️ IP can't be reliably captured client-side without a service
+      const ipAddress = null;
 
       try {
         const { data, error } = await supabase
@@ -71,9 +59,11 @@
             {
               promoter,
               platform,
-              campaign,
               destination: dest,
-              created_at: new Date().toISOString()
+              user_agent: userAgent,
+              ip_address: ipAddress,
+              created_at: new Date().toISOString(),
+              click_date: clickDate
             }
           ]);
 
@@ -81,16 +71,16 @@
           console.error('❌ INSERT ERROR:', error);
         } else {
           console.log('✅ INSERT SUCCESS:', data);
-          insertSuccess = true;
         }
+
       } catch (err) {
-        console.error('❌ INSERT FAILED (catch):', err);
+        console.error('❌ INSERT FAILED:', err);
       }
 
-      // ✅ Delay redirect so request finishes
+      // Give it time before redirect
       setTimeout(() => {
         window.location.href = finalUrl;
-      }, insertSuccess ? 300 : 1000); // longer delay if failed
+      }, 800);
 
     });
   </script>
