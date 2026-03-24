@@ -12,61 +12,68 @@
 </head>
 <body>
 <script>
+(function() {
+  const SUPABASE_URL = 'https://ngpbnhyuwvbcmdwpuhxq.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ncGJuaHl1d3ZiY21kd3B1aHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODYzNTAsImV4cCI6MjA4OTY2MjM1MH0.5pjzETSCFb-YjxSYxq8MX7t3ZyOEGlQ_dIkx_am3jLw';
+  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const params = new URLSearchParams(window.location.search);
+  const promoter = params.get('promoter') || 'unknown';
+  const platform = params.get('platform') || 'unknown';
+  const campaign = params.get('campaign') || null;
+  let dest = params.get('dest') || '';
+
+  try { dest = decodeURIComponent(dest); } catch {}
+
+  if (!dest) {
+    document.body.innerHTML = `<div style="font-family:sans-serif;padding:40px;text-align:center;"><h1>Fanzolinks</h1><p>Missing destination.</p></div>`;
+    return;
+  }
+
+  const extraParamsObj = { promoter, platform };
+  if (campaign) extraParamsObj.campaign = campaign;
+  const extraParams = new URLSearchParams(extraParamsObj).toString();
+  const separator = dest.includes('?') ? '&' : '?';
+  const finalUrl = dest + separator + extraParams;
+
+  // Show message immediately
+  document.body.innerHTML = `<div style="font-family:sans-serif;padding:40px;text-align:center;">
+    <h1 class="fade-scale">Fanzolinks</h1>
+    <p class="fade-scale" style="animation-delay:0.15s;">Thank you for submitting your form. You're one step closer to becoming a FANZO.</p>
+    <p class="fade-scale" style="animation-delay:0.3s;">Redirecting in 3 seconds...</p>
+  </div>`;
+
+  // Start redirect timer immediately
+  setTimeout(() => { window.location.href = finalUrl; }, 3000);
+
+  // Fire-and-forget logging
   (async () => {
-    const SUPABASE_URL = 'https://ngpbnhyuwvbcmdwpuhxq.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ncGJuaHl1d3ZiY21kd3B1aHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODYzNTAsImV4cCI6MjA4OTY2MjM1MH0.5pjzETSCFb-YjxSYxq8MX7t3ZyOEGlQ_dIkx_am3jLw';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    const params = new URLSearchParams(window.location.search);
-    const promoter = params.get('promoter') || 'unknown';
-    const platform = params.get('platform') || 'unknown';
-    const campaign = params.get('campaign') || null;
-    let dest = params.get('dest') || '';
-
-    try { dest = decodeURIComponent(dest); } catch {}
-
-    if (!dest) {
-      document.body.innerHTML = `<div style="font-family:sans-serif;padding:40px;text-align:center;"><h1>Fanzolinks</h1><p>Missing destination.</p></div>`;
-      return;
-    }
-
-    const extraParamsObj = { promoter, platform };
-    if (campaign) extraParamsObj.campaign = campaign;
-    const extraParams = new URLSearchParams(extraParamsObj).toString();
-    const separator = dest.includes('?') ? '&' : '?';
-    const finalUrl = dest + separator + extraParams;
-
-    document.body.innerHTML = `<div style="font-family:sans-serif;padding:40px;text-align:center;">
-      <h1 class="fade-scale">Fanzolinks</h1>
-      <p class="fade-scale" style="animation-delay:0.15s;">Thank you for submitting your form. You're one step closer to becoming a FANZO.</p>
-      <p class="fade-scale" style="animation-delay:0.3s;">Redirecting in 3 seconds...</p>
-    </div>`;
-
-    const userAgent = navigator.userAgent;
-    const clickDate = new Date().toISOString().split('T')[0];
-
-    let ip = null;
     try {
-      const res = await fetch('https://api.ipify.org?format=json');
-      const data = await res.json();
-      ip = data.ip || null;
-    } catch {}
+      const userAgent = navigator.userAgent;
+      const clickDate = new Date().toISOString().split('T')[0];
 
-    // Supabase insert attempt
-    (async () => {
+      let ip = null;
       try {
-        const { data, error } = await supabase.from('clicks').insert([{
-          promoter, platform, campaign, destination: dest, ip_address: ip,
-          user_agent: userAgent, created_at: new Date().toISOString(), click_date: clickDate
-        }]);
-        if (error) console.error('Supabase insert error:', error);
-        else console.log('Click logged:', data);
-      } catch (err) { console.error('Unexpected Supabase error:', err); }
-    })();
+        const res = await fetch('https://api.ipify.org?format=json');
+        const data = await res.json();
+        ip = data.ip || null;
+      } catch(e) {}
 
-    // Redirect after 3s regardless
-    setTimeout(() => { window.location.href = finalUrl; }, 3000);
+      await supabase.from('clicks').insert([{
+        promoter,
+        platform,
+        campaign,
+        destination: dest,
+        ip_address: ip,
+        user_agent: userAgent,
+        created_at: new Date().toISOString(),
+        click_date: clickDate
+      }]);
+    } catch(e) {
+      console.error('Logging failed:', e);
+    }
   })();
+})();
 </script>
 </body>
 </html>
