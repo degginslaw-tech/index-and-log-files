@@ -22,118 +22,91 @@
       }
     }
   </style>
+
+  <script>
+    window.addEventListener('load', async () => {
+      const SUPABASE_URL = 'https://ngpbnhyuwvbcmdwpuhxq.supabase.co';
+      const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ncGJuaHl1d3ZiY21kd3B1aHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODYzNTAsImV4cCI6MjA4OTY2MjM1MH0.5pjzETSCFb-YjxSYxq8MX7t3ZyOEGlQ_dIkx_am3jLw';
+
+      const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+      // Get URL parameters
+      const params = new URLSearchParams(window.location.search);
+      const promoter = params.get('promoter') || 'unknown';
+      const platform = params.get('platform') || 'unknown';
+      const campaign = params.get('campaign') || 'default';
+      let dest = params.get('dest');
+
+      if (!dest) {
+        document.body.innerHTML = `
+          <div style="font-family:sans-serif;padding:40px;text-align:center;">
+            <h1>Fanzolinks</h1>
+            <p>Missing destination.</p>
+          </div>
+        `;
+        return;
+      }
+
+      try { dest = decodeURIComponent(dest); } catch {}
+
+      const extraParams = new URLSearchParams({ promoter, platform, campaign }).toString();
+      const separator = dest.includes('?') ? '&' : '?';
+      const finalUrl = dest + separator + extraParams;
+
+      // Animated success message
+      document.body.innerHTML = `
+        <div style="font-family:sans-serif;padding:40px;text-align:center;">
+          <h1 class="fade-scale">Fanzolinks</h1>
+
+          <p class="fade-scale" style="animation-delay:0.15s;">
+            Thank you for submitting your form. You're one step closer to becoming a FANZO.
+          </p>
+
+          <p class="fade-scale" style="animation-delay:0.3s;">
+            Redirecting in 3 seconds...
+          </p>
+        </div>
+      `;
+
+      // Collect metadata
+      const userAgent = navigator.userAgent;
+      const clickDate = new Date().toISOString().split('T')[0];
+
+      // Fetch IP (optional)
+      let ip = null;
+      try {
+        const res = await fetch('https://api.ipify.org?format=json');
+        const data = await res.json();
+        ip = data.ip;
+      } catch (e) {
+        console.warn('Failed to fetch IP:', e);
+      }
+
+      // Insert into Supabase
+      try {
+        const { data, error } = await client.from('clicks').insert([{
+          promoter,
+          platform,
+          destination: dest,
+          ip_address: ip,
+          user_agent: userAgent,
+          created_at: new Date().toISOString(),
+          click_date: clickDate
+        }]);
+
+        if (error) console.error('Supabase insert error:', error);
+        else console.log('Click logged successfully:', data);
+      } catch (err) {
+        console.error('Unexpected insert error:', err);
+      }
+
+      // Delay 3 seconds before redirecting
+      setTimeout(() => {
+        window.location.href = finalUrl;
+      }, 3000);
+    });
+  </script>
 </head>
 
-<body>
-<script>
-function showError(message) {
-  document.body.innerHTML = `
-    <div style="font-family:sans-serif;padding:40px;text-align:center;">
-      <h1>Fanzolinks</h1>
-      <p>${message}</p>
-    </div>
-  `;
-}
-
-window.addEventListener('load', async () => {
-
-  // -----------------------------
-  // SUPABASE CLIENT WITH ANON KEY
-  // -----------------------------
-  const SUPABASE_URL = 'https://ngpbnhyuwvbcmdwpuhxq.supabase.co';
-  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ncGJuaHl1d3ZiY21kd3B1aHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODYzNTAsImV4cCI6MjA4OTY2MjM1MH0.5pjzETSCFb-YjxSYxq8MX7t3ZyOEGlQ_dIkx_am3jLw';
-  const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-  // -----------------------------
-  // GET URL PARAMETERS
-  // -----------------------------
-  const params = new URLSearchParams(window.location.search);
-  const promoter = params.get('promoter') || 'unknown';
-  const platform = params.get('platform') || 'unknown';
-  const campaignParam = params.get('campaign');
-  const campaign = campaignParam ? campaignParam : 'default';
-  let dest = params.get('dest');
-
-  // -----------------------------
-  // VALIDATE DESTINATION
-  // -----------------------------
-  if (!dest) {
-    showError("Missing destination.");
-    return;
-  }
-
-  try { dest = decodeURIComponent(dest.trim()); } catch {}
-
-  let urlObj;
-  try { urlObj = new URL(dest); } catch {
-    showError("Invalid destination URL.");
-    return;
-  }
-
-  if (urlObj.protocol !== "https:") {
-    showError("Destination must use HTTPS.");
-    return;
-  }
-
-  // -----------------------------
-  // ADD TRACKING PARAMETERS
-  // -----------------------------
-  urlObj.searchParams.set("promoter", promoter);
-  urlObj.searchParams.set("platform", platform);
-  urlObj.searchParams.set("campaign", campaign);
-
-  const finalUrl = urlObj.toString();
-
-  // -----------------------------
-  // UI MESSAGE
-  // -----------------------------
-  document.body.innerHTML = `
-    <div style="font-family:sans-serif;padding:40px;text-align:center;">
-      <h1 class="fade-scale">Fanzolinks</h1>
-      <p class="fade-scale" style="animation-delay:0.15s;">
-        Logging your click...
-      </p>
-      <p class="fade-scale" style="animation-delay:0.3s;">
-        Redirecting in 3 seconds...
-      </p>
-    </div>
-  `;
-
-  // -----------------------------
-  // METADATA COLLECTION
-  // -----------------------------
-  const userAgent = navigator.userAgent;
-  let ip = null;
-  try {
-    const res = await fetch('https://api.ipify.org?format=json');
-    const data = await res.json();
-    ip = data.ip;
-  } catch {}
-
-  // -----------------------------
-  // INSERT INTO SUPABASE (omit created_at & click_date)
-  // -----------------------------
-  try {
-    await client.from('clicks').insert([{
-      promoter,
-      platform,
-      campaign,
-      destination: finalUrl,
-      ip_address: ip,
-      user_agent: userAgent
-    }]).select();
-  } catch (err) {
-    console.error('Insert error:', err);
-  }
-
-  // -----------------------------
-  // REDIRECT AFTER 3 SECONDS
-  // -----------------------------
-  setTimeout(() => {
-    window.location.href = finalUrl;
-  }, 3000);
-
-});
-</script>
-</body>
+<body></body>
 </html>
