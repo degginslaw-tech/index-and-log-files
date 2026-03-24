@@ -5,7 +5,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
@@ -34,7 +33,7 @@
       const params = new URLSearchParams(window.location.search);
       const promoter = params.get('promoter') || 'unknown';
       const platform = params.get('platform') || 'unknown';
-      const campaign = params.get('campaign') || null; // null if not provided
+      const campaign = params.get('campaign'); // keep null if missing
       let dest = params.get('dest');
 
       if (!dest) {
@@ -49,7 +48,10 @@
 
       try { dest = decodeURIComponent(dest); } catch {}
 
-      const extraParams = new URLSearchParams({ promoter, platform, campaign }).toString();
+      // Only include campaign in URL if it exists
+      const extraParamsObj = { promoter, platform };
+      if (campaign) extraParamsObj.campaign = campaign;
+      const extraParams = new URLSearchParams(extraParamsObj).toString();
       const separator = dest.includes('?') ? '&' : '?';
       const finalUrl = dest + separator + extraParams;
 
@@ -57,11 +59,9 @@
       document.body.innerHTML = `
         <div style="font-family:sans-serif;padding:40px;text-align:center;">
           <h1 class="fade-scale">Fanzolinks</h1>
-
           <p class="fade-scale" style="animation-delay:0.15s;">
             Thank you for submitting your form. You're one step closer to becoming a FANZO.
           </p>
-
           <p class="fade-scale" style="animation-delay:0.3s;">
             Redirecting in 3 seconds...
           </p>
@@ -87,7 +87,7 @@
         const { data, error } = await supabaseClient.from('clicks').insert([{
           promoter,
           platform,
-          campaign,
+          campaign: campaign || null, // ensures null is sent if missing
           destination: dest,
           ip_address: ip,
           user_agent: userAgent,
@@ -101,7 +101,7 @@
         console.error('Unexpected insert error:', err);
       }
 
-      // Delay 3 seconds before redirecting
+      // Redirect after 3 seconds
       setTimeout(() => {
         window.location.href = finalUrl;
       }, 3000);
