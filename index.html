@@ -42,14 +42,12 @@ window.addEventListener('load', async () => {
   // -----------------------------
   const SUPABASE_URL = 'https://ngpbnhyuwvbcmdwpuhxq.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ncGJuaHl1d3ZiY21kd3B1aHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODYzNTAsImV4cCI6MjA4OTY2MjM1MH0.5pjzETSCFb-YjxSYxq8MX7t3ZyOEGlQ_dIkx_am3jLw';
-  
   const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   // -----------------------------
   // GET URL PARAMETERS
   // -----------------------------
   const params = new URLSearchParams(window.location.search);
-
   const promoter = params.get('promoter') || 'unknown';
   const platform = params.get('platform') || 'unknown';
   const campaignParam = params.get('campaign');
@@ -78,7 +76,7 @@ window.addEventListener('load', async () => {
   }
 
   // -----------------------------
-  // ADD TRACKING PARAMS
+  // ADD TRACKING PARAMETERS
   // -----------------------------
   urlObj.searchParams.set("promoter", promoter);
   urlObj.searchParams.set("platform", platform);
@@ -93,7 +91,7 @@ window.addEventListener('load', async () => {
     <div style="font-family:sans-serif;padding:40px;text-align:center;">
       <h1 class="fade-scale">Fanzolinks</h1>
       <p class="fade-scale" style="animation-delay:0.15s;">
-        Processing your request...
+        Logging your click...
       </p>
       <p class="fade-scale" style="animation-delay:0.3s;">
         Redirecting in 3 seconds...
@@ -105,9 +103,6 @@ window.addEventListener('load', async () => {
   // METADATA COLLECTION
   // -----------------------------
   const userAgent = navigator.userAgent;
-  const clickDate = new Date().toISOString().split('T')[0];
-  const createdAt = new Date().toISOString();
-
   let ip = null;
   try {
     const res = await fetch('https://api.ipify.org?format=json');
@@ -116,7 +111,7 @@ window.addEventListener('load', async () => {
   } catch {}
 
   // -----------------------------
-  // INSERT INTO SUPABASE USING ANON KEY
+  // INSERT INTO SUPABASE (omit created_at & click_date)
   // -----------------------------
   try {
     await client.from('clicks').insert([{
@@ -125,9 +120,7 @@ window.addEventListener('load', async () => {
       campaign,
       destination: finalUrl,
       ip_address: ip,
-      user_agent: userAgent,
-      created_at: createdAt,
-      click_date: clickDate
+      user_agent: userAgent
     }]).select();
   } catch (err) {
     console.error('Insert error:', err);
