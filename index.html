@@ -8,6 +8,21 @@
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+  <style>
+    .fade-scale {
+      opacity: 0;
+      transform: scale(0.95);
+      animation: fadeInScale 0.6s ease-out forwards;
+    }
+
+    @keyframes fadeInScale {
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+  </style>
+
   <script>
     window.addEventListener('load', async () => {
       const SUPABASE_URL = 'https://ngpbnhyuwvbcmdwpuhxq.supabase.co';
@@ -38,11 +53,18 @@
       const separator = dest.includes('?') ? '&' : '?';
       const finalUrl = dest + separator + extraParams;
 
-      // Show redirect message
+      // Animated success message
       document.body.innerHTML = `
         <div style="font-family:sans-serif;padding:40px;text-align:center;">
-          <h1>Fanzolinks</h1>
-          <p>Redirecting in 3 seconds...</p>
+          <h1 class="fade-scale">Fanzolinks</h1>
+
+          <p class="fade-scale" style="animation-delay:0.15s;">
+            Thank you for submitting your form. You're one step closer to becoming a FANZO.
+          </p>
+
+          <p class="fade-scale" style="animation-delay:0.3s;">
+            Redirecting in 3 seconds...
+          </p>
         </div>
       `;
 
@@ -66,7 +88,7 @@
           promoter,
           platform,
           destination: dest,
-          ip_address: ip,       // can be null
+          ip_address: ip,
           user_agent: userAgent,
           created_at: new Date().toISOString(),
           click_date: clickDate
@@ -78,7 +100,7 @@
         console.error('Unexpected insert error:', err);
       }
 
-      // Delay 3 seconds before redirecting to allow insert to complete
+      // Delay 3 seconds before redirecting
       setTimeout(() => {
         window.location.href = finalUrl;
       }, 3000);
