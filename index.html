@@ -22,147 +22,143 @@
       }
     }
   </style>
-
-  <script>
-    function showError(message) {
-      document.body.innerHTML = `
-        <div style="font-family:sans-serif;padding:40px;text-align:center;">
-          <h1>Fanzolinks</h1>
-          <p>${message}</p>
-        </div>
-      `;
-    }
-
-    window.addEventListener('load', async () => {
-      const SUPABASE_URL = 'https://ngpbnhyuwvbcmdwpuhxq.supabase.co';
-      const SUPABASE_KEY = 'YOUR_ANON_KEY'; // ⚠️ replace in production
-
-      const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-      // -----------------------------
-      // GET PARAMS
-      // -----------------------------
-      const params = new URLSearchParams(window.location.search);
-
-      const promoter = params.get('promoter') || 'unknown';
-      const platform = params.get('platform') || 'unknown';
-      const campaign = params.get('campaign') || null; // safer for DB
-      let dest = params.get('dest');
-
-      // -----------------------------
-      // VALIDATE DESTINATION
-      // -----------------------------
-      if (!dest) {
-        showError("Missing destination.");
-        return;
-      }
-
-      dest = dest.trim();
-
-      try {
-        dest = decodeURIComponent(dest);
-      } catch {}
-
-      let urlObj;
-      try {
-        urlObj = new URL(dest);
-      } catch {
-        showError("Invalid destination URL.");
-        return;
-      }
-
-      if (urlObj.protocol !== "https:") {
-        showError("Destination must use HTTPS.");
-        return;
-      }
-
-      // -----------------------------
-      // BUILD FINAL URL
-      // -----------------------------
-      const extraParams = new URLSearchParams({
-        promoter,
-        platform,
-        campaign: campaign || 'default'
-      });
-
-      Object.entries(Object.fromEntries(extraParams)).forEach(([k, v]) => {
-        if (v) urlObj.searchParams.set(k, v);
-      });
-
-      const finalUrl = urlObj.toString();
-
-      // -----------------------------
-      // UI
-      // -----------------------------
-      document.body.innerHTML = `
-        <div style="font-family:sans-serif;padding:40px;text-align:center;">
-          <h1 class="fade-scale">Fanzolinks</h1>
-
-          <p class="fade-scale" style="animation-delay:0.15s;">
-            Processing your request...
-          </p>
-
-          <p class="fade-scale" style="animation-delay:0.3s;">
-            Redirecting shortly...
-          </p>
-        </div>
-      `;
-
-      // -----------------------------
-      // METADATA
-      // -----------------------------
-      const userAgent = navigator.userAgent;
-      const clickDate = new Date().toISOString().split('T')[0];
-      const createdAt = new Date().toISOString();
-
-      let ip = null;
-      try {
-        const res = await fetch('https://api.ipify.org?format=json');
-        const data = await res.json();
-        ip = data.ip;
-      } catch {}
-
-      // -----------------------------
-      // INSERT (FIXED)
-      // -----------------------------
-      try {
-        const { data, error } = await client
-          .from('clicks')
-          .insert([{
-            promoter,
-            platform,
-            campaign,
-            destination: finalUrl, // ✅ log actual redirect
-            ip_address: ip,
-            user_agent: userAgent,
-            created_at: createdAt,
-            click_date: clickDate
-          }])
-          .select(); // ✅ CRITICAL FIX
-
-        if (error) {
-          console.error('❌ Supabase insert error:', {
-            message: error.message,
-            details: error.details,
-            hint: error.hint
-          });
-        } else {
-          console.log('✅ Click logged:', data);
-        }
-
-      } catch (err) {
-        console.error('❌ Unexpected insert error:', err);
-      }
-
-      // -----------------------------
-      // REDIRECT (ALWAYS HAPPENS)
-      // -----------------------------
-      setTimeout(() => {
-        window.location.href = finalUrl;
-      }, 1500); // faster UX
-    });
-  </script>
 </head>
 
-<body></body>
+<body>
+<script>
+function showError(message) {
+  document.body.innerHTML = `
+    <div style="font-family:sans-serif;padding:40px;text-align:center;">
+      <h1>Fanzolinks</h1>
+      <p>${message}</p>
+    </div>
+  `;
+}
+
+window.addEventListener('load', async () => {
+
+  // ⚠️ USE YOUR REAL KEY HERE
+  const SUPABASE_URL = 'https://ngpbnhyuwvbcmdwpuhxq.supabase.co';
+  const SUPABASE_KEY = 'REPLACE_WITH_REAL_ANON_KEY';
+
+  const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // -----------------------------
+  // GET PARAMS
+  // -----------------------------
+  const params = new URLSearchParams(window.location.search);
+
+  const promoter = params.get('promoter') || 'unknown';
+  const platform = params.get('platform') || 'unknown';
+  const campaign = params.get('campaign') || null;
+  let dest = params.get('dest');
+
+  // -----------------------------
+  // VALIDATE DEST
+  // -----------------------------
+  if (!dest) {
+    showError("Missing destination.");
+    return;
+  }
+
+  try {
+    dest = decodeURIComponent(dest.trim());
+  } catch {}
+
+  let urlObj;
+  try {
+    urlObj = new URL(dest);
+  } catch {
+    showError("Invalid destination URL.");
+    return;
+  }
+
+  if (urlObj.protocol !== "https:") {
+    showError("Destination must use HTTPS.");
+    return;
+  }
+
+  // -----------------------------
+  // ADD TRACKING PARAMS
+  // -----------------------------
+  urlObj.searchParams.set("promoter", promoter);
+  urlObj.searchParams.set("platform", platform);
+  urlObj.searchParams.set("campaign", campaign || "default");
+
+  const finalUrl = urlObj.toString();
+
+  // -----------------------------
+  // UI
+  // -----------------------------
+  document.body.innerHTML = `
+    <div style="font-family:sans-serif;padding:40px;text-align:center;">
+      <h1 class="fade-scale">Fanzolinks</h1>
+      <p class="fade-scale" style="animation-delay:0.15s;">
+        Logging your click...
+      </p>
+    </div>
+  `;
+
+  // -----------------------------
+  // METADATA
+  // -----------------------------
+  const userAgent = navigator.userAgent;
+  const clickDate = new Date().toISOString().split('T')[0];
+  const createdAt = new Date().toISOString();
+
+  let ip = null;
+  try {
+    const res = await fetch('https://api.ipify.org?format=json');
+    const data = await res.json();
+    ip = data.ip;
+  } catch {}
+
+  // -----------------------------
+  // INSERT + DEBUG ALERT
+  // -----------------------------
+  let insertResult;
+
+  try {
+    const { data, error } = await client
+      .from('clicks')
+      .insert([{
+        promoter,
+        platform,
+        campaign,
+        destination: finalUrl,
+        ip_address: ip,
+        user_agent: userAgent,
+        created_at: createdAt,
+        click_date: clickDate
+      }])
+      .select();
+
+    insertResult = {
+      success: !error,
+      data,
+      error: error ? {
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      } : null
+    };
+
+  } catch (err) {
+    insertResult = {
+      success: false,
+      error: { message: err.message }
+    };
+  }
+
+  // 🔥 SHOW EXACT RESULT
+  alert(JSON.stringify(insertResult, null, 2));
+
+  // -----------------------------
+  // REDIRECT AFTER ALERT
+  // -----------------------------
+  window.location.href = finalUrl;
+
+});
+</script>
+</body>
 </html>
