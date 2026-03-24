@@ -46,41 +46,18 @@
       const campaign = params.get('campaign') || 'default';
       let dest = params.get('dest');
 
-      // -----------------------------
-      // FULL DEST VALIDATION
-      // -----------------------------
+      // Basic dest validation (keep behavior close to original)
       if (!dest) {
         showError("Missing destination.");
         return;
       }
 
-      // Trim whitespace + hidden characters
       dest = dest.trim();
 
-      // Attempt to decode safely
       try {
         dest = decodeURIComponent(dest);
       } catch (e) {
         console.warn("Decode failed, using raw dest:", e);
-      }
-
-      // Auto-encode if promoter pasted raw URL
-      try {
-        new URL(dest); // If this fails, dest is not a valid URL
-      } catch {
-        try {
-          dest = encodeURI(dest);
-          new URL(dest); // Validate again
-        } catch {
-          showError("Invalid destination URL.");
-          return;
-        }
-      }
-
-      // Must be HTTPS
-      if (!dest.startsWith("https://")) {
-        showError("Destination must be a secure HTTPS link.");
-        return;
       }
 
       // Build final redirect URL with tracking params
@@ -117,12 +94,12 @@
         console.warn('Failed to fetch IP:', e);
       }
 
-      // Insert into Supabase
+      // Insert into Supabase (now includes campaign)
       try {
         const { data, error } = await client.from('clicks').insert([{
           promoter,
           platform,
-          campaign,     // <-- FIXED: Now inserting campaign
+          campaign,
           destination: dest,
           ip_address: ip,
           user_agent: userAgent,
