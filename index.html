@@ -34,16 +34,15 @@
       const params = new URLSearchParams(window.location.search);
       const promoter = params.get('promoter') || 'unknown';
       const platform = params.get('platform') || 'unknown';
-      const campaign = params.get('campaign') || 'default';
+      const campaign = params.get('campaign') || 'default';  // fixed, now will log
       let dest = params.get('dest');
 
       if (!dest) {
-        document.body.innerHTML = `
-          <div style="font-family:sans-serif;padding:40px;text-align:center;">
+        document.body.innerHTML = 
+          `<div style="font-family:sans-serif;padding:40px;text-align:center;">
             <h1>Fanzolinks</h1>
             <p>Missing destination.</p>
-          </div>
-        `;
+          </div>`;
         return;
       }
 
@@ -54,8 +53,8 @@
       const finalUrl = dest + separator + extraParams;
 
       // Animated success message
-      document.body.innerHTML = `
-        <div style="font-family:sans-serif;padding:40px;text-align:center;">
+      document.body.innerHTML = 
+        `<div style="font-family:sans-serif;padding:40px;text-align:center;">
           <h1 class="fade-scale">Fanzolinks</h1>
 
           <p class="fade-scale" style="animation-delay:0.15s;">
@@ -65,8 +64,7 @@
           <p class="fade-scale" style="animation-delay:0.3s;">
             Redirecting in 3 seconds...
           </p>
-        </div>
-      `;
+        </div>`;
 
       // Collect metadata
       const userAgent = navigator.userAgent;
@@ -82,11 +80,12 @@
         console.warn('Failed to fetch IP:', e);
       }
 
-      // Insert into Supabase
+      // Insert into Supabase (campaign now included)
       try {
         const { data, error } = await client.from('clicks').insert([{
           promoter,
           platform,
+          campaign,  // <-- included so campaign logs
           destination: dest,
           ip_address: ip,
           user_agent: userAgent,
