@@ -24,6 +24,15 @@
   </style>
 
   <script>
+    function showError(message) {
+      document.body.innerHTML = `
+        <div style="font-family:sans-serif;padding:40px;text-align:center;">
+          <h1>Fanzolinks</h1>
+          <p>${message}</p>
+        </div>
+      `;
+    }
+
     window.addEventListener('load', async () => {
       const SUPABASE_URL = 'https://ngpbnhyuwvbcmdwpuhxq.supabase.co';
       const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ncGJuaHl1d3ZiY21kd3B1aHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODYzNTAsImV4cCI6MjA4OTY2MjM1MH0.5pjzETSCFb-YjxSYxq8MX7t3ZyOEGlQ_dIkx_am3jLw';
@@ -37,18 +46,44 @@
       const campaign = params.get('campaign') || 'default';
       let dest = params.get('dest');
 
+      // -----------------------------
+      // FULL DEST VALIDATION
+      // -----------------------------
       if (!dest) {
-        document.body.innerHTML = `
-          <div style="font-family:sans-serif;padding:40px;text-align:center;">
-            <h1>Fanzolinks</h1>
-            <p>Missing destination.</p>
-          </div>
-        `;
+        showError("Missing destination.");
         return;
       }
 
-      try { dest = decodeURIComponent(dest); } catch {}
+      // Trim whitespace + hidden characters
+      dest = dest.trim();
 
+      // Attempt to decode safely
+      try {
+        dest = decodeURIComponent(dest);
+      } catch (e) {
+        console.warn("Decode failed, using raw dest:", e);
+      }
+
+      // Auto-encode if promoter pasted raw URL
+      try {
+        new URL(dest); // If this fails, dest is not a valid URL
+      } catch {
+        try {
+          dest = encodeURI(dest);
+          new URL(dest); // Validate again
+        } catch {
+          showError("Invalid destination URL.");
+          return;
+        }
+      }
+
+      // Must be HTTPS
+      if (!dest.startsWith("https://")) {
+        showError("Destination must be a secure HTTPS link.");
+        return;
+      }
+
+      // Build final redirect URL with tracking params
       const extraParams = new URLSearchParams({ promoter, platform, campaign }).toString();
       const separator = dest.includes('?') ? '&' : '?';
       const finalUrl = dest + separator + extraParams;
@@ -87,6 +122,7 @@
         const { data, error } = await client.from('clicks').insert([{
           promoter,
           platform,
+          campaign,     // <-- FIXED: Now inserting campaign
           destination: dest,
           ip_address: ip,
           user_agent: userAgent,
