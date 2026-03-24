@@ -37,38 +37,37 @@ function showError(message) {
 
 window.addEventListener('load', async () => {
 
-  // ⚠️ USE YOUR REAL KEY HERE
+  // -----------------------------
+  // SUPABASE CLIENT WITH ANON KEY
+  // -----------------------------
   const SUPABASE_URL = 'https://ngpbnhyuwvbcmdwpuhxq.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ncGJuaHl1d3ZiY21kd3B1aHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODYzNTAsImV4cCI6MjA4OTY2MjM1MH0.5pjzETSCFb-YjxSYxq8MX7t3ZyOEGlQ_dIkx_am3jLw';
-
+  
   const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   // -----------------------------
-  // GET PARAMS
+  // GET URL PARAMETERS
   // -----------------------------
   const params = new URLSearchParams(window.location.search);
 
   const promoter = params.get('promoter') || 'unknown';
   const platform = params.get('platform') || 'unknown';
-  const campaign = params.get('campaign') || null;
+  const campaignParam = params.get('campaign');
+  const campaign = campaignParam ? campaignParam : 'default';
   let dest = params.get('dest');
 
   // -----------------------------
-  // VALIDATE DEST
+  // VALIDATE DESTINATION
   // -----------------------------
   if (!dest) {
     showError("Missing destination.");
     return;
   }
 
-  try {
-    dest = decodeURIComponent(dest.trim());
-  } catch {}
+  try { dest = decodeURIComponent(dest.trim()); } catch {}
 
   let urlObj;
-  try {
-    urlObj = new URL(dest);
-  } catch {
+  try { urlObj = new URL(dest); } catch {
     showError("Invalid destination URL.");
     return;
   }
@@ -83,24 +82,27 @@ window.addEventListener('load', async () => {
   // -----------------------------
   urlObj.searchParams.set("promoter", promoter);
   urlObj.searchParams.set("platform", platform);
-  urlObj.searchParams.set("campaign", campaign || "default");
+  urlObj.searchParams.set("campaign", campaign);
 
   const finalUrl = urlObj.toString();
 
   // -----------------------------
-  // UI
+  // UI MESSAGE
   // -----------------------------
   document.body.innerHTML = `
     <div style="font-family:sans-serif;padding:40px;text-align:center;">
       <h1 class="fade-scale">Fanzolinks</h1>
       <p class="fade-scale" style="animation-delay:0.15s;">
-        Logging your click...
+        Processing your request...
+      </p>
+      <p class="fade-scale" style="animation-delay:0.3s;">
+        Redirecting in 3 seconds...
       </p>
     </div>
   `;
 
   // -----------------------------
-  // METADATA
+  // METADATA COLLECTION
   // -----------------------------
   const userAgent = navigator.userAgent;
   const clickDate = new Date().toISOString().split('T')[0];
@@ -114,49 +116,29 @@ window.addEventListener('load', async () => {
   } catch {}
 
   // -----------------------------
-  // INSERT + DEBUG ALERT
+  // INSERT INTO SUPABASE USING ANON KEY
   // -----------------------------
-  let insertResult;
-
   try {
-    const { data, error } = await client
-      .from('clicks')
-      .insert([{
-        promoter,
-        platform,
-        campaign,
-        destination: finalUrl,
-        ip_address: ip,
-        user_agent: userAgent,
-        created_at: createdAt,
-        click_date: clickDate
-      }])
-      .select();
-
-    insertResult = {
-      success: !error,
-      data,
-      error: error ? {
-        message: error.message,
-        details: error.details,
-        hint: error.hint
-      } : null
-    };
-
+    await client.from('clicks').insert([{
+      promoter,
+      platform,
+      campaign,
+      destination: finalUrl,
+      ip_address: ip,
+      user_agent: userAgent,
+      created_at: createdAt,
+      click_date: clickDate
+    }]).select();
   } catch (err) {
-    insertResult = {
-      success: false,
-      error: { message: err.message }
-    };
+    console.error('Insert error:', err);
   }
 
-  // 🔥 SHOW EXACT RESULT
-  alert(JSON.stringify(insertResult, null, 2));
-
   // -----------------------------
-  // REDIRECT AFTER ALERT
+  // REDIRECT AFTER 3 SECONDS
   // -----------------------------
-  window.location.href = finalUrl;
+  setTimeout(() => {
+    window.location.href = finalUrl;
+  }, 3000);
 
 });
 </script>
