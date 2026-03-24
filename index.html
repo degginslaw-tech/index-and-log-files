@@ -35,18 +35,23 @@
 
     window.addEventListener('load', async () => {
       const SUPABASE_URL = 'https://ngpbnhyuwvbcmdwpuhxq.supabase.co';
-      const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ncGJuaHl1d3ZiY21kd3B1aHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODYzNTAsImV4cCI6MjA4OTY2MjM1MH0.5pjzETSCFb-YjxSYxq8MX7t3ZyOEGlQ_dIkx_am3jLw';
+      const SUPABASE_KEY = 'YOUR_ANON_KEY'; // ⚠️ replace in production
 
       const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-      // Get URL parameters
+      // -----------------------------
+      // GET PARAMS
+      // -----------------------------
       const params = new URLSearchParams(window.location.search);
+
       const promoter = params.get('promoter') || 'unknown';
       const platform = params.get('platform') || 'unknown';
-      const campaign = params.get('campaign') || 'default';
+      const campaign = params.get('campaign') || null; // safer for DB
       let dest = params.get('dest');
 
-      // Basic dest validation (keep behavior close to original)
+      // -----------------------------
+      // VALIDATE DESTINATION
+      // -----------------------------
       if (!dest) {
         showError("Missing destination.");
         return;
@@ -56,67 +61,105 @@
 
       try {
         dest = decodeURIComponent(dest);
-      } catch (e) {
-        console.warn("Decode failed, using raw dest:", e);
+      } catch {}
+
+      let urlObj;
+      try {
+        urlObj = new URL(dest);
+      } catch {
+        showError("Invalid destination URL.");
+        return;
       }
 
-      // Build final redirect URL with tracking params
-      const extraParams = new URLSearchParams({ promoter, platform, campaign }).toString();
-      const separator = dest.includes('?') ? '&' : '?';
-      const finalUrl = dest + separator + extraParams;
+      if (urlObj.protocol !== "https:") {
+        showError("Destination must use HTTPS.");
+        return;
+      }
 
-      // Animated success message
+      // -----------------------------
+      // BUILD FINAL URL
+      // -----------------------------
+      const extraParams = new URLSearchParams({
+        promoter,
+        platform,
+        campaign: campaign || 'default'
+      });
+
+      Object.entries(Object.fromEntries(extraParams)).forEach(([k, v]) => {
+        if (v) urlObj.searchParams.set(k, v);
+      });
+
+      const finalUrl = urlObj.toString();
+
+      // -----------------------------
+      // UI
+      // -----------------------------
       document.body.innerHTML = `
         <div style="font-family:sans-serif;padding:40px;text-align:center;">
           <h1 class="fade-scale">Fanzolinks</h1>
 
           <p class="fade-scale" style="animation-delay:0.15s;">
-            Thank you for submitting your form. You're one step closer to becoming a FANZO.
+            Processing your request...
           </p>
 
           <p class="fade-scale" style="animation-delay:0.3s;">
-            Redirecting in 3 seconds...
+            Redirecting shortly...
           </p>
         </div>
       `;
 
-      // Collect metadata
+      // -----------------------------
+      // METADATA
+      // -----------------------------
       const userAgent = navigator.userAgent;
       const clickDate = new Date().toISOString().split('T')[0];
+      const createdAt = new Date().toISOString();
 
-      // Fetch IP (optional)
       let ip = null;
       try {
         const res = await fetch('https://api.ipify.org?format=json');
         const data = await res.json();
         ip = data.ip;
-      } catch (e) {
-        console.warn('Failed to fetch IP:', e);
-      }
+      } catch {}
 
-      // Insert into Supabase (now includes campaign)
+      // -----------------------------
+      // INSERT (FIXED)
+      // -----------------------------
       try {
-        const { data, error } = await client.from('clicks').insert([{
-          promoter,
-          platform,
-          campaign,
-          destination: dest,
-          ip_address: ip,
-          user_agent: userAgent,
-          created_at: new Date().toISOString(),
-          click_date: clickDate
-        }]);
+        const { data, error } = await client
+          .from('clicks')
+          .insert([{
+            promoter,
+            platform,
+            campaign,
+            destination: finalUrl, // ✅ log actual redirect
+            ip_address: ip,
+            user_agent: userAgent,
+            created_at: createdAt,
+            click_date: clickDate
+          }])
+          .select(); // ✅ CRITICAL FIX
 
-        if (error) console.error('Supabase insert error:', error);
-        else console.log('Click logged successfully:', data);
+        if (error) {
+          console.error('❌ Supabase insert error:', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint
+          });
+        } else {
+          console.log('✅ Click logged:', data);
+        }
+
       } catch (err) {
-        console.error('Unexpected insert error:', err);
+        console.error('❌ Unexpected insert error:', err);
       }
 
-      // Delay 3 seconds before redirecting
+      // -----------------------------
+      // REDIRECT (ALWAYS HAPPENS)
+      // -----------------------------
       setTimeout(() => {
         window.location.href = finalUrl;
-      }, 3000);
+      }, 1500); // faster UX
     });
   </script>
 </head>
