@@ -28,13 +28,13 @@
       const SUPABASE_URL = 'https://ngpbnhyuwvbcmdwpuhxq.supabase.co';
       const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ncGJuaHl1d3ZiY21kd3B1aHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODYzNTAsImV4cCI6MjA4OTY2MjM1MH0.5pjzETSCFb-YjxSYxq8MX7t3ZyOEGlQ_dIkx_am3jLw';
 
-      const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
       // Get URL parameters
       const params = new URLSearchParams(window.location.search);
       const promoter = params.get('promoter') || 'unknown';
       const platform = params.get('platform') || 'unknown';
-      const campaign = params.get('campaign') || 'default';
+      const campaign = params.get('campaign') || null; // null if not provided
       let dest = params.get('dest');
 
       if (!dest) {
@@ -84,9 +84,10 @@
 
       // Insert into Supabase
       try {
-        const { data, error } = await client.from('clicks').insert([{
+        const { data, error } = await supabaseClient.from('clicks').insert([{
           promoter,
           platform,
+          campaign,
           destination: dest,
           ip_address: ip,
           user_agent: userAgent,
